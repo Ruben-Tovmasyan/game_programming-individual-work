@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, SafeAreaView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
 
 const App = () => {
     const generateNumbers = () => {
@@ -11,6 +11,22 @@ const App = () => {
     const [flippedIndices, setFlippedIndices] = useState([]);
     const [matchedIndices, setMatchedIndices] = useState([]);
     const [lockBoard, setLockBoard] = useState(false);
+    const [timeElapsed, setTimeElapsed] = useState(0);
+    const [gameStarted, setGameStarted] = useState(false);
+    const [steps, setSteps] = useState(0);
+    const [gameCompleted, setGameCompleted] = useState(false);
+
+    useEffect(() => {
+        let timer;
+        if (gameStarted) {
+            timer = setInterval(() => {
+                setTimeElapsed((prevTime) => prevTime + 1);
+            }, 1000);
+        } else {
+            clearInterval(timer);
+        }
+        return () => clearInterval(timer);
+    }, [gameStarted]);
 
     useEffect(() => {
         if (flippedIndices.length === 2) {
@@ -28,9 +44,23 @@ const App = () => {
         }
     }, [flippedIndices]);
 
+    useEffect(() => {
+        if (matchedIndices.length === numbers.length && matchedIndices.length > 0) {
+            setGameStarted(false);
+            setGameCompleted(true);
+        }
+    }, [matchedIndices, numbers.length]);
+
     const handlePress = (index) => {
-        if (flippedIndices.length < 2 && !flippedIndices.includes(index) && !matchedIndices.includes(index) && !lockBoard) {
+        if (!gameStarted) setGameStarted(true);
+        if (
+            flippedIndices.length < 2 &&
+            !flippedIndices.includes(index) &&
+            !matchedIndices.includes(index) &&
+            !lockBoard
+        ) {
             setFlippedIndices((prev) => [...prev, index]);
+            setSteps((prev) => prev + 1);
         }
     };
 
@@ -39,6 +69,10 @@ const App = () => {
         setFlippedIndices([]);
         setMatchedIndices([]);
         setLockBoard(false);
+        setGameStarted(false);
+        setTimeElapsed(0);
+        setSteps(0);
+        setGameCompleted(false);
     };
 
     const renderCard = (number, index) => {
@@ -56,13 +90,35 @@ const App = () => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <View style={styles.grid}>
-                {numbers.map((number, index) => renderCard(number, index))}
-            </View>
-            {matchedIndices.length === numbers.length && Alert.alert('Congratulations!', 'You matched all pairs!')}
-            <TouchableOpacity style={styles.restartButton} onPress={resetGame}>
-                <Text style={styles.restartButtonText}>Restart Game</Text>
-            </TouchableOpacity>
+            {gameCompleted ? (
+                <View style={styles.completedContainer}>
+                    <Text style={styles.congratulationsText}>
+                        Congratulations! You matched all pairs in {timeElapsed} seconds with {steps} steps!
+                    </Text>
+                    <TouchableOpacity style={styles.restartButton} onPress={resetGame}>
+                        <Text style={styles.restartButtonText}>Restart Game</Text>
+                    </TouchableOpacity>
+                </View>
+            ) : (
+                <>
+                    <View style={styles.infoContainer}>
+                        <Text style={styles.infoText}>Time: {timeElapsed}s</Text>
+                        <Text style={styles.infoText}>Steps: {steps}</Text>
+                        <Text style={styles.infoText}>
+                            Matched Pairs: {matchedIndices.length / 2}
+                        </Text>
+                        <Text style={styles.infoText}>
+                            Total Pairs: {numbers.length / 2}
+                        </Text>
+                    </View>
+                    <View style={styles.grid}>
+                        {numbers.map((number, index) => renderCard(number, index))}
+                    </View>
+                    <TouchableOpacity style={styles.restartButton} onPress={resetGame}>
+                        <Text style={styles.restartButtonText}>Restart Game</Text>
+                    </TouchableOpacity>
+                </>
+            )}
         </SafeAreaView>
     );
 };
@@ -74,6 +130,18 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 0,
         backgroundColor: '#000',
+    },
+    infoContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        width: '100%',
+        paddingHorizontal: 20,
+        marginBottom: 30,
+    },
+    infoText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#fff',
     },
     grid: {
         flexDirection: 'row',
@@ -100,7 +168,7 @@ const styles = StyleSheet.create({
     cardText: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#fff'
+        color: '#fff',
     },
     restartButton: {
         marginTop: 20,
@@ -113,6 +181,17 @@ const styles = StyleSheet.create({
     restartButtonText: {
         color: '#d2e625',
         fontSize: 16,
+    },
+    congratulationsText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#2fad51',
+        marginBottom: 20,
+        textAlign: 'center',
+    },
+    completedContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 });
 
